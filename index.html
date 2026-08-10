@@ -118,8 +118,22 @@
     display:flex; align-items:center; justify-content:center;
     padding:14px;
   }
-  .card-img img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .card-img img{ max-width:100%; max-height:100%; object-fit:contain; cursor:zoom-in; }
   .card-img .noimg{ color:var(--gray); font-size:12px; text-align:center; }
+  .lightbox{
+    display:none; position:fixed; inset:0; background:rgba(28,27,25,0.82);
+    z-index:100; align-items:center; justify-content:center; padding:24px;
+    cursor:zoom-out;
+  }
+  .lightbox.open{ display:flex; }
+  .lightbox img{
+    max-width:min(520px, 90vw); max-height:80vh; object-fit:contain;
+    background:#fff; border-radius:12px; padding:20px;
+  }
+  .lightbox-close{
+    position:absolute; top:20px; right:24px; color:#fff; font-size:28px;
+    background:none; border:none; cursor:pointer; line-height:1;
+  }
   .card-body{ padding:12px 14px 14px; display:flex; flex-direction:column; gap:6px; flex:1; }
   .card-ref{ font-size:12px; color:var(--gray); font-variant-numeric:tabular-nums; }
   .card-title{ font-size:15px; font-weight:600; line-height:1.25; }
@@ -190,6 +204,11 @@
 </main>
 
 <footer>Mise à jour automatique depuis l'inventaire · <span id="total"></span> sets au total</footer>
+
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightboxClose" type="button" aria-label="Fermer">&times;</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
 
 <script>
 // ============================================================
@@ -279,7 +298,7 @@ function carteHTML(item) {
         item.statut === 'En cours' ? '--blue' :
         item.statut === 'Monté' ? '--purple' : '--gray'})"></div>
       <div class="card-img">
-        <img src="${img}" alt="${item.titre}" loading="lazy"
+        <img src="${img}" alt="${item.titre}" loading="lazy" data-ref="${item.ref}" data-titre="${item.titre}"
              onerror="this.parentElement.innerHTML='<span class=noimg>Pas d\\'image</span>'">
       </div>
       <div class="card-body">
@@ -350,6 +369,20 @@ async function init() {
       localStorage.setItem('vueLego', 'liste');
     });
     if (localStorage.getItem('vueLego') === 'liste') btnListe.click();
+
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    grid.addEventListener('click', (e) => {
+      const img = e.target.closest('.card-img img');
+      if (!img) return;
+      lightboxImg.src = img.src;
+      lightboxImg.alt = img.dataset.titre || '';
+      lightbox.classList.add('open');
+    });
+    function fermerLightbox() { lightbox.classList.remove('open'); lightboxImg.src = ''; }
+    document.getElementById('lightboxClose').addEventListener('click', fermerLightbox);
+    lightbox.addEventListener('click', (e) => { if (e.target === lightbox) fermerLightbox(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') fermerLightbox(); });
   } catch (err) {
     document.getElementById('status').textContent =
       'Erreur de chargement : ' + err.message + '. Vérifie que le fichier est bien partagé publiquement ("Anyone with the link").';
