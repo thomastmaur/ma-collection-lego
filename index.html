@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collection LEGO</title>
+<style>
+  :root{
+    --ink:#1c1b19;
+    --paper:#faf9f6;
+    --paper-dim:#f0efe9;
+    --line:#e2e0d8;
+    --brick:#c8102e;
+    --brick-dim:#f6dde1;
+    --amber:#b8791a;
+    --amber-dim:#f6ecd9;
+    --green:#2f7a4d;
+    --green-dim:#e1f0e6;
+    --blue:#2f5f9e;
+    --blue-dim:#e2ebf6;
+    --purple:#6a4c93;
+    --purple-dim:#ebe4f2;
+    --gray:#6b6a66;
+    --gray-dim:#eceae5;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Inter","Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .display{
+    font-family:"Georgia","Iowan Old Style",serif;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  header{
+    position:sticky; top:0; z-index:10;
+    background:var(--paper);
+    border-bottom:1px solid var(--line);
+    padding:18px 24px 14px;
+  }
+  .header-row{
+    display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+    max-width:1180px; margin:0 auto 14px;
+  }
+  h1{
+    font-size:26px; margin:0; color:var(--ink);
+  }
+  .stud{
+    display:inline-block; width:10px; height:10px; border-radius:50%;
+    background:var(--brick); margin-right:8px; vertical-align:middle;
+    box-shadow: 14px 0 0 var(--amber), 28px 0 0 var(--green), 42px 0 0 var(--blue);
+  }
+  .count{
+    color:var(--gray); font-size:14px; margin-left:auto;
+  }
+  .controls{
+    display:flex; gap:10px; flex-wrap:wrap; max-width:1180px; margin:0 auto;
+  }
+  .controls input, .controls select{
+    font:inherit; font-size:14px;
+    border:1px solid var(--line); border-radius:8px;
+    padding:9px 12px; background:#fff; color:var(--ink);
+  }
+  .controls input[type="search"]{ flex:1 1 240px; min-width:180px; }
+  .controls select{ flex:0 1 170px; }
+  .controls input:focus, .controls select:focus{
+    outline:2px solid var(--brick); outline-offset:1px;
+  }
+  main{ max-width:1180px; margin:0 auto; padding:22px 24px 60px; }
+  #status{ color:var(--gray); font-size:14px; padding:40px 0; text-align:center; }
+  .grid{
+    display:grid; gap:16px;
+    grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
+  }
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    overflow:hidden; display:flex; flex-direction:column;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .card:hover{ transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+  .card-status{ height:5px; width:100%; }
+  .card-img{
+    aspect-ratio:1/1; background:var(--paper-dim);
+    display:flex; align-items:center; justify-content:center;
+    padding:14px;
+  }
+  .card-img img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .card-img .noimg{ color:var(--gray); font-size:12px; text-align:center; }
+  .card-body{ padding:12px 14px 14px; display:flex; flex-direction:column; gap:6px; flex:1; }
+  .card-ref{ font-size:12px; color:var(--gray); font-variant-numeric:tabular-nums; }
+  .card-title{ font-size:15px; font-weight:600; line-height:1.25; }
+  .card-meta{ font-size:12.5px; color:var(--gray); display:flex; flex-wrap:wrap; gap:6px; }
+  .tag{
+    display:inline-block; font-size:11.5px; padding:2px 8px; border-radius:999px;
+    font-weight:600;
+  }
+  .tag-complet{ background:var(--green-dim); color:var(--green); }
+  .tag-amonter{ background:var(--amber-dim); color:var(--amber); }
+  .tag-encours{ background:var(--blue-dim); color:var(--blue); }
+  .tag-monte{ background:var(--purple-dim); color:var(--purple); }
+  .tag-nonprecise{ background:var(--gray-dim); color:var(--gray); }
+  .card-flags{ font-size:12px; color:var(--gray); display:flex; gap:10px; }
+  .card-comment{ font-size:12.5px; color:var(--ink); background:var(--paper-dim); border-radius:6px; padding:6px 8px; }
+  .card-sale{
+    margin-top:auto; padding-top:8px; border-top:1px dashed var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+  }
+  .price{ font-weight:700; color:var(--brick); font-size:15px; }
+  .sale-badge{
+    font-size:11.5px; font-weight:700; color:var(--brick); background:var(--brick-dim);
+    padding:3px 8px; border-radius:999px;
+  }
+  .loc{ font-size:11.5px; color:var(--gray); }
+  .card-maj{ font-size:11px; color:var(--gray); }
+  .empty{ text-align:center; color:var(--gray); padding:60px 0; }
+  footer{ text-align:center; color:var(--gray); font-size:12px; padding:20px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <h1 class="display"><span class="stud" aria-hidden="true"></span>Collection LEGO</h1>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="controls">
+    <input type="search" id="search" placeholder="Rechercher une référence ou un nom…" autocomplete="off">
+    <select id="famille"><option value="">Toutes les familles</option></select>
+    <select id="annee"><option value="">Toutes les années</option></select>
+    <select id="statut">
+      <option value="">Tous les statuts</option>
+      <option value="Complet">Complet</option>
+      <option value="À monter">À monter</option>
+      <option value="En cours">En cours</option>
+      <option value="Monté">Monté</option>
+      <option value="Non précisé">Non précisé</option>
+    </select>
+    <select id="vente">
+      <option value="">Tout</option>
+      <option value="Oui">En vente uniquement</option>
+    </select>
+  </div>
+</header>
+
+<main>
+  <div id="status">Chargement de la collection…</div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none;">Aucun set ne correspond à cette recherche.</div>
+</main>
+
+<footer>Mise à jour automatique depuis l'inventaire · <span id="total"></span> sets au total</footer>
+
+<script>
+// ============================================================
+// CONFIGURATION — à adapter si le fichier Google Sheets change
+// ============================================================
+const SHEET_ID = '1VEd3y9nj9RIKs1lZqtVKs3c7y8XQ3kXo_0ZjRteuhUY';
+const SHEET_NAME = 'Export public';
+
+function imageUrl(ref) {
+  const base = String(ref).split('-')[0].trim();
+  return 'https://img.bricklink.com/ItemImage/SN/0/' + base + '-1.png';
+}
+
+function statusClass(statut) {
+  switch (statut) {
+    case 'Complet': return 'tag-complet';
+    case 'À monter': return 'tag-amonter';
+    case 'En cours': return 'tag-encours';
+    case 'Monté': return 'tag-monte';
+    default: return 'tag-nonprecise';
+  }
+}
+
+let ITEMS = [];
+
+async function chargerDonnees() {
+  const url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID +
+    '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(SHEET_NAME);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Impossible de charger la feuille (' + res.status + ')');
+  const text = await res.text();
+  const jsonText = text.substring(text.indexOf('{'), text.lastIndexOf('}') + 1);
+  const data = JSON.parse(jsonText);
+
+  const cols = data.table.cols.map(c => (c.label || '').trim());
+  const idx = name => cols.indexOf(name);
+
+  const iRef = idx('Ref'), iTitre = idx('Titre'), iFamille = idx('Famille'), iAnnee = idx('Année'),
+        iStatut = idx('Statut'), iComment = idx('Commentaire'), iNotice = idx('Notice presente'),
+        iBoite = idx('Boite presente'), iVente = idx('En vente'), iEmpl = idx('Emplacement'),
+        iPrix = idx('Prix de vente'), iMaj = idx('Maj');
+
+  return data.table.rows.map(r => {
+    const v = i => (i === -1 || !r.c[i]) ? '' : (r.c[i].f || r.c[i].v || '');
+    return {
+      ref: v(iRef), titre: v(iTitre), famille: v(iFamille), annee: v(iAnnee),
+      statut: v(iStatut) || 'Non précisé', commentaire: v(iComment),
+      notice: v(iNotice) === 'Oui', boite: v(iBoite) === 'Oui',
+      enVente: v(iVente) === 'Oui', emplacement: v(iEmpl),
+      prix: v(iPrix), maj: v(iMaj)
+    };
+  }).filter(item => item.ref);
+}
+
+function peuplerFiltres(items) {
+  const familles = [...new Set(items.map(i => i.famille).filter(Boolean))].sort();
+  const annees = [...new Set(items.map(i => i.annee).filter(Boolean))].sort((a,b) => b - a);
+
+  const selFamille = document.getElementById('famille');
+  familles.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f; opt.textContent = f;
+    selFamille.appendChild(opt);
+  });
+
+  const selAnnee = document.getElementById('annee');
+  annees.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a; opt.textContent = a;
+    selAnnee.appendChild(opt);
+  });
+}
+
+function carteHTML(item) {
+  const img = imageUrl(item.ref);
+  const venteHTML = item.enVente
+    ? `<div class="card-sale">
+         <span class="sale-badge">En vente${item.emplacement ? ' · ' + item.emplacement : ''}</span>
+         ${item.prix ? `<span class="price">${item.prix} €</span>` : ''}
+       </div>`
+    : '';
+  return `
+    <div class="card" data-famille="${item.famille}" data-annee="${item.annee}" data-statut="${item.statut}" data-vente="${item.enVente ? 'Oui' : 'Non'}" data-search="${(item.ref + ' ' + item.titre).toLowerCase()}">
+      <div class="card-status" style="background:var(${
+        item.statut === 'Complet' ? '--green' :
+        item.statut === 'À monter' ? '--amber' :
+        item.statut === 'En cours' ? '--blue' :
+        item.statut === 'Monté' ? '--purple' : '--gray'})"></div>
+      <div class="card-img">
+        <img src="${img}" alt="${item.titre}" loading="lazy"
+             onerror="this.parentElement.innerHTML='<span class=noimg>Pas d\\'image</span>'">
+      </div>
+      <div class="card-body">
+        <div class="card-ref">Réf. ${item.ref}${item.annee ? ' · ' + item.annee : ''}</div>
+        <div class="card-title">${item.titre || '(titre inconnu)'}</div>
+        <div class="card-meta">
+          ${item.famille ? `<span>${item.famille}</span>` : ''}
+          <span class="tag ${statusClass(item.statut)}">${item.statut}</span>
+        </div>
+        <div class="card-flags">
+          <span>${item.notice ? '✓' : '✗'} Notice</span>
+          <span>${item.boite ? '✓' : '✗'} Boîte</span>
+        </div>
+        ${item.commentaire ? `<div class="card-comment">${item.commentaire}</div>` : ''}
+        ${venteHTML}
+        ${item.maj ? `<div class="card-maj">Maj : ${item.maj}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function appliquerFiltres() {
+  const recherche = document.getElementById('search').value.trim().toLowerCase();
+  const famille = document.getElementById('famille').value;
+  const annee = document.getElementById('annee').value;
+  const statut = document.getElementById('statut').value;
+  const vente = document.getElementById('vente').value;
+
+  let visibles = 0;
+  document.querySelectorAll('.card').forEach(card => {
+    const matchRecherche = !recherche || card.dataset.search.includes(recherche);
+    const matchFamille = !famille || card.dataset.famille === famille;
+    const matchAnnee = !annee || card.dataset.annee === annee;
+    const matchStatut = !statut || card.dataset.statut === statut;
+    const matchVente = !vente || card.dataset.vente === vente;
+    const ok = matchRecherche && matchFamille && matchAnnee && matchStatut && matchVente;
+    card.style.display = ok ? '' : 'none';
+    if (ok) visibles++;
+  });
+
+  document.getElementById('count').textContent = visibles + ' résultat' + (visibles !== 1 ? 's' : '');
+  document.getElementById('empty').style.display = visibles === 0 ? 'block' : 'none';
+}
+
+async function init() {
+  try {
+    ITEMS = await chargerDonnees();
+    document.getElementById('status').style.display = 'none';
+    document.getElementById('total').textContent = ITEMS.length;
+    peuplerFiltres(ITEMS);
+    document.getElementById('grid').innerHTML = ITEMS.map(carteHTML).join('');
+    appliquerFiltres();
+
+    ['search','famille','annee','statut','vente'].forEach(id => {
+      document.getElementById(id).addEventListener('input', appliquerFiltres);
+    });
+  } catch (err) {
+    document.getElementById('status').textContent =
+      'Erreur de chargement : ' + err.message + '. Vérifie que le fichier est bien partagé publiquement ("Anyone with the link").';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
