@@ -77,12 +77,41 @@
     display:grid; gap:16px;
     grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
   }
+  .grid.list-view{
+    display:flex; flex-direction:column; gap:0;
+  }
+  .view-toggle{
+    display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden;
+  }
+  .view-toggle button{
+    font:inherit; font-size:13px; border:none; background:#fff; color:var(--gray);
+    padding:9px 14px; cursor:pointer;
+  }
+  .view-toggle button.active{ background:var(--ink); color:#fff; }
+  .view-toggle button:first-child{ border-right:1px solid var(--line); }
   .card{
     background:#fff; border:1px solid var(--line); border-radius:var(--radius);
     overflow:hidden; display:flex; flex-direction:column;
     transition:transform .12s ease, box-shadow .12s ease;
   }
   .card:hover{ transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+
+  /* --- Mode liste --- */
+  .list-view .card{
+    flex-direction:row; align-items:stretch; border-radius:0;
+    border-left:none; border-right:none; border-top:none;
+  }
+  .list-view .card:hover{ transform:none; box-shadow:none; background:var(--paper-dim); }
+  .list-view .card-status{ width:5px; height:auto; flex:0 0 5px; }
+  .list-view .card-img{ width:56px; height:56px; flex:0 0 56px; aspect-ratio:auto; padding:6px; }
+  .list-view .card-body{ flex-direction:row; align-items:center; gap:16px; padding:8px 14px; flex-wrap:wrap; }
+  .list-view .card-ref{ flex:0 0 110px; }
+  .list-view .card-title{ flex:1 1 200px; }
+  .list-view .card-meta{ flex:0 0 auto; }
+  .list-view .card-flags{ flex:0 0 auto; }
+  .list-view .card-comment{ display:none; }
+  .list-view .card-sale{ margin-top:0; padding-top:0; border-top:none; flex:0 0 auto; }
+  .list-view .card-maj{ display:none; }
   .card-status{ height:5px; width:100%; }
   .card-img{
     aspect-ratio:1/1; background:var(--paper-dim);
@@ -104,7 +133,10 @@
   .tag-encours{ background:var(--blue-dim); color:var(--blue); }
   .tag-monte{ background:var(--purple-dim); color:var(--purple); }
   .tag-nonprecise{ background:var(--gray-dim); color:var(--gray); }
-  .card-flags{ font-size:12px; color:var(--gray); display:flex; gap:10px; }
+  .card-flags{ font-size:12px; color:var(--gray); display:flex; gap:12px; }
+  .flag{ }
+  .flag.ok{ color:var(--green); font-weight:600; }
+  .flag.no{ color:var(--gray); text-decoration:line-through; opacity:.65; }
   .card-comment{ font-size:12.5px; color:var(--ink); background:var(--paper-dim); border-radius:6px; padding:6px 8px; }
   .card-sale{
     margin-top:auto; padding-top:8px; border-top:1px dashed var(--line);
@@ -127,6 +159,10 @@
   <div class="header-row">
     <h1 class="display"><span class="stud" aria-hidden="true"></span>Collection LEGO</h1>
     <span class="count" id="count"></span>
+    <div class="view-toggle">
+      <button id="btnCases" class="active" type="button">Cases</button>
+      <button id="btnListe" type="button">Liste</button>
+    </div>
   </div>
   <div class="controls">
     <input type="search" id="search" placeholder="Rechercher une référence ou un nom…" autocomplete="off">
@@ -193,7 +229,7 @@ async function chargerDonnees() {
 
   const iRef = idx('Ref'), iTitre = idx('Titre'), iFamille = idx('Famille'), iAnnee = idx('Année'),
         iStatut = idx('Statut'), iComment = idx('Commentaire'), iNotice = idx('Notice presente'),
-        iBoite = idx('Boite presente'), iVente = idx('En vente'), iEmpl = idx('Emplacement'),
+        iBoite = idx('Boite presente'), iVente = idx('En vente'),
         iPrix = idx('Prix de vente'), iMaj = idx('Maj');
 
   return data.table.rows.map(r => {
@@ -202,7 +238,7 @@ async function chargerDonnees() {
       ref: v(iRef), titre: v(iTitre), famille: v(iFamille), annee: v(iAnnee),
       statut: v(iStatut) || 'Non précisé', commentaire: v(iComment),
       notice: v(iNotice) === 'Oui', boite: v(iBoite) === 'Oui',
-      enVente: v(iVente) === 'Oui', emplacement: v(iEmpl),
+      enVente: v(iVente) === 'Oui',
       prix: v(iPrix), maj: v(iMaj)
     };
   }).filter(item => item.ref);
@@ -231,7 +267,7 @@ function carteHTML(item) {
   const img = imageUrl(item.ref);
   const venteHTML = item.enVente
     ? `<div class="card-sale">
-         <span class="sale-badge">En vente${item.emplacement ? ' · ' + item.emplacement : ''}</span>
+         <span class="sale-badge">En vente</span>
          ${item.prix ? `<span class="price">${item.prix} €</span>` : ''}
        </div>`
     : '';
@@ -254,8 +290,8 @@ function carteHTML(item) {
           <span class="tag ${statusClass(item.statut)}">${item.statut}</span>
         </div>
         <div class="card-flags">
-          <span>${item.notice ? '✓' : '✗'} Notice</span>
-          <span>${item.boite ? '✓' : '✗'} Boîte</span>
+          <span class="flag ${item.notice ? 'ok' : 'no'}">${item.notice ? '✓ ' : ''}Notice</span>
+          <span class="flag ${item.boite ? 'ok' : 'no'}">${item.boite ? '✓ ' : ''}Boîte</span>
         </div>
         ${item.commentaire ? `<div class="card-comment">${item.commentaire}</div>` : ''}
         ${venteHTML}
@@ -299,6 +335,21 @@ async function init() {
     ['search','famille','annee','statut','vente'].forEach(id => {
       document.getElementById(id).addEventListener('input', appliquerFiltres);
     });
+
+    const grid = document.getElementById('grid');
+    const btnCases = document.getElementById('btnCases');
+    const btnListe = document.getElementById('btnListe');
+    btnCases.addEventListener('click', () => {
+      grid.classList.remove('list-view');
+      btnCases.classList.add('active'); btnListe.classList.remove('active');
+      localStorage.setItem('vueLego', 'cases');
+    });
+    btnListe.addEventListener('click', () => {
+      grid.classList.add('list-view');
+      btnListe.classList.add('active'); btnCases.classList.remove('active');
+      localStorage.setItem('vueLego', 'liste');
+    });
+    if (localStorage.getItem('vueLego') === 'liste') btnListe.click();
   } catch (err) {
     document.getElementById('status').textContent =
       'Erreur de chargement : ' + err.message + '. Vérifie que le fichier est bien partagé publiquement ("Anyone with the link").';
