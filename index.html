@@ -110,6 +110,7 @@
   .list-view .card-meta{ flex:0 0 auto; }
   .list-view .card-flags{ flex:0 0 auto; }
   .list-view .card-comment{ display:none; }
+  .list-view .card-title-fr{ display:none; }
   .list-view .card-sale{ margin-top:0; padding-top:0; border-top:none; flex:0 0 auto; }
   .list-view .card-maj{ display:none; }
   .card-status{ height:5px; width:100%; }
@@ -137,6 +138,8 @@
   .card-body{ padding:12px 14px 14px; display:flex; flex-direction:column; gap:6px; flex:1; }
   .card-ref{ font-size:12px; color:var(--gray); font-variant-numeric:tabular-nums; }
   .card-title{ font-size:15px; font-weight:600; line-height:1.25; }
+  .card-title-fr{ font-size:12.5px; color:var(--gray); font-style:italic; line-height:1.2; }
+  .card-title-fr .badge-auto{ font-style:normal; font-size:10px; color:var(--gray); border:1px solid var(--line); border-radius:4px; padding:0 4px; margin-left:4px; }
   .card-meta{ font-size:12.5px; color:var(--gray); display:flex; flex-wrap:wrap; gap:6px; }
   .tag{
     display:inline-block; font-size:11.5px; padding:2px 8px; border-radius:999px;
@@ -246,7 +249,7 @@ async function chargerDonnees() {
   const cols = data.table.cols.map(c => (c.label || '').trim());
   const idx = name => cols.indexOf(name);
 
-  const iRef = idx('Ref'), iTitre = idx('Titre'), iFamille = idx('Famille'), iAnnee = idx('Année'),
+  const iRef = idx('Ref'), iTitre = idx('Titre'), iTitreFr = idx('Titre FR'), iFamille = idx('Famille'), iAnnee = idx('Année'),
         iStatut = idx('Statut'), iComment = idx('Commentaire'), iNotice = idx('Notice presente'),
         iBoite = idx('Boite presente'), iVente = idx('En vente'),
         iPrix = idx('Prix de vente'), iMaj = idx('Maj');
@@ -254,7 +257,7 @@ async function chargerDonnees() {
   return data.table.rows.map(r => {
     const v = i => (i === -1 || !r.c[i]) ? '' : (r.c[i].f || r.c[i].v || '');
     return {
-      ref: v(iRef), titre: v(iTitre), famille: v(iFamille), annee: v(iAnnee),
+      ref: v(iRef), titre: v(iTitre), titreFr: v(iTitreFr), famille: v(iFamille), annee: v(iAnnee),
       statut: v(iStatut) || 'Non précisé', commentaire: v(iComment),
       notice: v(iNotice) === 'Oui', boite: v(iBoite) === 'Oui',
       enVente: v(iVente) === 'Oui',
@@ -291,7 +294,7 @@ function carteHTML(item) {
        </div>`
     : '';
   return `
-    <div class="card" data-famille="${item.famille}" data-annee="${item.annee}" data-statut="${item.statut}" data-vente="${item.enVente ? 'Oui' : 'Non'}" data-search="${(item.ref + ' ' + item.titre).toLowerCase()}">
+    <div class="card" data-famille="${item.famille}" data-annee="${item.annee}" data-statut="${item.statut}" data-vente="${item.enVente ? 'Oui' : 'Non'}" data-search="${(item.ref + ' ' + item.titre + ' ' + item.titreFr).toLowerCase()}">
       <div class="card-status" style="background:var(${
         item.statut === 'Complet' ? '--green' :
         item.statut === 'À monter' ? '--amber' :
@@ -304,6 +307,7 @@ function carteHTML(item) {
       <div class="card-body">
         <div class="card-ref">Réf. ${item.ref}${item.annee ? ' · ' + item.annee : ''}</div>
         <div class="card-title">${item.titre || '(titre inconnu)'}</div>
+        ${item.titreFr ? `<div class="card-title-fr">${item.titreFr}<span class="badge-auto">trad. auto</span></div>` : ''}
         <div class="card-meta">
           ${item.famille ? `<span>${item.famille}</span>` : ''}
           <span class="tag ${statusClass(item.statut)}">${item.statut}</span>
