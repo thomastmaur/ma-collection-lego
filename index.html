@@ -281,13 +281,14 @@ async function chargerDonnees() {
 
   return data.table.rows.map(r => {
     const v = i => (i === -1 || !r.c[i]) ? '' : (r.c[i].f || r.c[i].v || '');
+    const vBrut = i => (i === -1 || !r.c[i] || r.c[i].v === null || r.c[i].v === undefined) ? '' : r.c[i].v;
     return {
-      ref: v(iRef), titre: v(iTitre), titreFr: v(iTitreFr), famille: v(iFamille), annee: v(iAnnee),
+      ref: v(iRef), titre: v(iTitre), titreFr: v(iTitreFr), famille: v(iFamille), annee: vBrut(iAnnee),
       etat: v(iEtat) || 'Occasion',
       statut: v(iStatut) || 'Non précisé', commentaire: v(iComment),
       notice: v(iNotice) === 'Oui', boite: v(iBoite) === 'Oui',
       enVente: v(iVente) === 'Oui',
-      prix: v(iPrix), maj: v(iMaj)
+      prix: vBrut(iPrix), maj: v(iMaj)
     };
   }).filter(item => item.ref);
 }
