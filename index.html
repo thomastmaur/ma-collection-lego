@@ -77,9 +77,6 @@
     display:grid; gap:16px;
     grid-template-columns:repeat(auto-fill, minmax(230px, 1fr));
   }
-  .grid.list-view{
-    display:flex; flex-direction:column; gap:0;
-  }
   .view-toggle{
     display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden;
   }
@@ -89,30 +86,36 @@
   }
   .view-toggle button.active{ background:var(--ink); color:#fff; }
   .view-toggle button:first-child{ border-right:1px solid var(--line); }
+
+  /* --- Vue tableau --- */
+  .table-wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius); }
+  table.liste{ width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
+  table.liste th{
+    text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em;
+    color:var(--gray); background:var(--paper-dim); padding:10px 12px;
+    border-bottom:1px solid var(--line); white-space:nowrap; position:sticky; top:0;
+  }
+  table.liste td{
+    padding:8px 12px; border-bottom:1px solid var(--line); vertical-align:middle;
+  }
+  table.liste tr:last-child td{ border-bottom:none; }
+  table.liste tr:hover td{ background:var(--paper-dim); }
+  .thumb{
+    width:40px; height:40px; object-fit:contain; background:var(--paper-dim);
+    border-radius:6px; cursor:zoom-in; display:block;
+  }
+  .cell-titre{ min-width:180px; }
+  .cell-titre .fr{ font-size:11.5px; color:var(--gray); font-style:italic; }
+  .cell-ref{ font-variant-numeric:tabular-nums; color:var(--gray); white-space:nowrap; }
+  table.liste .tag{ font-size:10.5px; padding:2px 7px; }
+  .cell-flags{ white-space:nowrap; font-size:12px; }
+  .cell-prix{ font-weight:700; color:var(--brick); white-space:nowrap; }
   .card{
     background:#fff; border:1px solid var(--line); border-radius:var(--radius);
     overflow:hidden; display:flex; flex-direction:column;
     transition:transform .12s ease, box-shadow .12s ease;
   }
   .card:hover{ transform:translateY(-2px); box-shadow:0 6px 18px rgba(0,0,0,0.08); }
-
-  /* --- Mode liste --- */
-  .list-view .card{
-    flex-direction:row; align-items:stretch; border-radius:0;
-    border-left:none; border-right:none; border-top:none;
-  }
-  .list-view .card:hover{ transform:none; box-shadow:none; background:var(--paper-dim); }
-  .list-view .card-status{ width:5px; height:auto; flex:0 0 5px; }
-  .list-view .card-img{ width:56px; height:56px; flex:0 0 56px; aspect-ratio:auto; padding:6px; }
-  .list-view .card-body{ flex-direction:row; align-items:center; gap:16px; padding:8px 14px; flex-wrap:wrap; }
-  .list-view .card-ref{ flex:0 0 110px; }
-  .list-view .card-title{ flex:1 1 200px; }
-  .list-view .card-meta{ flex:0 0 auto; }
-  .list-view .card-flags{ flex:0 0 auto; }
-  .list-view .card-comment{ display:none; }
-  .list-view .card-title-fr{ display:none; }
-  .list-view .card-sale{ margin-top:0; padding-top:0; border-top:none; flex:0 0 auto; }
-  .list-view .card-maj{ display:none; }
   .card-status{ height:5px; width:100%; }
   .card-img{
     aspect-ratio:1/1; background:var(--paper-dim);
@@ -205,6 +208,25 @@
 <main>
   <div id="status">Chargement de la collection…</div>
   <div class="grid" id="grid"></div>
+  <div class="table-wrap" id="tableWrap" style="display:none;">
+    <table class="liste">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Réf.</th>
+          <th>Titre</th>
+          <th>Famille</th>
+          <th>Année</th>
+          <th>État</th>
+          <th>Statut</th>
+          <th>Notice / Boîte</th>
+          <th>Vente</th>
+          <th>Maj</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
   <div class="empty" id="empty" style="display:none;">Aucun set ne correspond à cette recherche.</div>
 </main>
 
@@ -328,6 +350,30 @@ function carteHTML(item) {
     </div>`;
 }
 
+function ligneTableauHTML(item) {
+  const img = imageUrl(item.ref);
+  const venteHTML = item.enVente
+    ? `<span class="sale-badge">En vente</span>${item.prix ? ` <span class="cell-prix">${item.prix} €</span>` : ''}`
+    : '';
+  return `
+    <tr data-famille="${item.famille}" data-annee="${item.annee}" data-statut="${item.statut}" data-vente="${item.enVente ? 'Oui' : 'Non'}" data-search="${(item.ref + ' ' + item.titre + ' ' + item.titreFr).toLowerCase()}">
+      <td><img class="thumb" src="${img}" alt="${item.titre}" loading="lazy" data-titre="${item.titre}" onerror="this.style.visibility='hidden'"></td>
+      <td class="cell-ref">${item.ref}</td>
+      <td class="cell-titre">${item.titre || '(titre inconnu)'}${item.titreFr ? `<div class="fr">${item.titreFr}</div>` : ''}</td>
+      <td>${item.famille || ''}</td>
+      <td>${item.annee || ''}</td>
+      <td><span class="tag ${item.etat === 'Neuf' ? 'tag-neuf' : 'tag-occasion'}">${item.etat}</span></td>
+      <td><span class="tag ${statusClass(item.statut)}">${item.statut}</span></td>
+      <td class="cell-flags">
+        <span class="flag ${item.notice ? 'ok' : 'no'}">${item.notice ? '✓ ' : ''}Notice</span>
+        &nbsp;
+        <span class="flag ${item.boite ? 'ok' : 'no'}">${item.boite ? '✓ ' : ''}Boîte</span>
+      </td>
+      <td>${venteHTML}</td>
+      <td>${item.maj || ''}</td>
+    </tr>`;
+}
+
 function appliquerFiltres() {
   const recherche = document.getElementById('search').value.trim().toLowerCase();
   const famille = document.getElementById('famille').value;
@@ -335,15 +381,20 @@ function appliquerFiltres() {
   const statut = document.getElementById('statut').value;
   const vente = document.getElementById('vente').value;
 
+  const vueListe = document.getElementById('tableWrap').style.display !== 'none';
+  const elements = vueListe
+    ? document.querySelectorAll('table.liste tbody tr')
+    : document.querySelectorAll('#grid .card');
+
   let visibles = 0;
-  document.querySelectorAll('.card').forEach(card => {
-    const matchRecherche = !recherche || card.dataset.search.includes(recherche);
-    const matchFamille = !famille || card.dataset.famille === famille;
-    const matchAnnee = !annee || card.dataset.annee === annee;
-    const matchStatut = !statut || card.dataset.statut === statut;
-    const matchVente = !vente || card.dataset.vente === vente;
+  elements.forEach(el => {
+    const matchRecherche = !recherche || el.dataset.search.includes(recherche);
+    const matchFamille = !famille || el.dataset.famille === famille;
+    const matchAnnee = !annee || el.dataset.annee === annee;
+    const matchStatut = !statut || el.dataset.statut === statut;
+    const matchVente = !vente || el.dataset.vente === vente;
     const ok = matchRecherche && matchFamille && matchAnnee && matchStatut && matchVente;
-    card.style.display = ok ? '' : 'none';
+    el.style.display = ok ? '' : 'none';
     if (ok) visibles++;
   });
 
@@ -358,6 +409,7 @@ async function init() {
     document.getElementById('total').textContent = ITEMS.length;
     peuplerFiltres(ITEMS);
     document.getElementById('grid').innerHTML = ITEMS.map(carteHTML).join('');
+    document.getElementById('tableBody').innerHTML = ITEMS.map(ligneTableauHTML).join('');
     appliquerFiltres();
 
     ['search','famille','annee','statut','vente'].forEach(id => {
@@ -365,24 +417,27 @@ async function init() {
     });
 
     const grid = document.getElementById('grid');
+    const tableWrap = document.getElementById('tableWrap');
     const btnCases = document.getElementById('btnCases');
     const btnListe = document.getElementById('btnListe');
     btnCases.addEventListener('click', () => {
-      grid.classList.remove('list-view');
+      grid.style.display = ''; tableWrap.style.display = 'none';
       btnCases.classList.add('active'); btnListe.classList.remove('active');
       localStorage.setItem('vueLego', 'cases');
+      appliquerFiltres();
     });
     btnListe.addEventListener('click', () => {
-      grid.classList.add('list-view');
+      grid.style.display = 'none'; tableWrap.style.display = '';
       btnListe.classList.add('active'); btnCases.classList.remove('active');
       localStorage.setItem('vueLego', 'liste');
+      appliquerFiltres();
     });
     if (localStorage.getItem('vueLego') === 'liste') btnListe.click();
 
     const lightbox = document.getElementById('lightbox');
     const lightboxImg = document.getElementById('lightboxImg');
-    grid.addEventListener('click', (e) => {
-      const img = e.target.closest('.card-img img');
+    document.querySelector('main').addEventListener('click', (e) => {
+      const img = e.target.closest('.card-img img, .thumb');
       if (!img) return;
       lightboxImg.src = img.src;
       lightboxImg.alt = img.dataset.titre || '';
