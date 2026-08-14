@@ -86,6 +86,11 @@
   }
   .view-toggle button.active{ background:var(--ink); color:#fff; }
   .view-toggle button:first-child{ border-right:1px solid var(--line); }
+  .view-toggle-single{
+    font:inherit; font-size:13px; border:1px solid var(--line); border-radius:8px;
+    background:#fff; color:var(--ink); padding:9px 14px; cursor:pointer;
+  }
+  .view-toggle-single.active{ background:var(--brick); border-color:var(--brick); color:#fff; }
 
   /* --- Vue tableau --- */
   .table-wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius); }
@@ -202,6 +207,7 @@
       <option value="">Tout</option>
       <option value="Oui">En vente uniquement</option>
     </select>
+    <button id="btnNouveautes" type="button" class="view-toggle-single">Nouveautés (2 mois)</button>
   </div>
 </header>
 
@@ -259,6 +265,14 @@ function statusClass(statut) {
   }
 }
 
+function parseGvizDate(raw) {
+  if (!raw) return null;
+  if (raw instanceof Date) return raw;
+  const m = /^Date\((\d+),(\d+),(\d+)/.exec(String(raw));
+  if (m) return new Date(Number(m[1]), Number(m[2]), Number(m[3]));
+  return null;
+}
+
 let ITEMS = [];
 
 async function chargerDonnees() {
@@ -288,7 +302,7 @@ async function chargerDonnees() {
       statut: v(iStatut) || 'Non précisé', commentaire: v(iComment),
       notice: v(iNotice) === 'Oui', boite: v(iBoite) === 'Oui',
       enVente: v(iVente) === 'Oui',
-      prix: vBrut(iPrix), maj: v(iMaj)
+      prix: vBrut(iPrix), maj: v(iMaj), majDate: parseGvizDate(vBrut(iMaj))
     };
   }).filter(item => item.ref);
 }
@@ -312,6 +326,13 @@ function peuplerFiltres(items) {
   });
 }
 
+function estRecent(item) {
+  if (!item.majDate) return false;
+  const deuxMois = new Date();
+  deuxMois.setMonth(deuxMois.getMonth() - 2);
+  return item.majDate >= deuxMois;
+}
+
 function carteHTML(item) {
   const img = imageUrl(item.ref);
   const venteHTML = item.enVente
@@ -321,7 +342,7 @@ function carteHTML(item) {
        </div>`
     : '';
   return `
-    <div class="card" data-famille="${item.famille}" data-annee="${item.annee}" data-statut="${item.statut}" data-vente="${item.enVente ? 'Oui' : 'Non'}" data-search="${(item.ref + ' ' + item.titre + ' ' + item.titreFr).toLowerCase()}">
+    <div class="card" data-famille="${item.famille}" data-annee="${item.annee}" data-statut="${item.statut}" data-vente="${item.enVente ? 'Oui' : 'Non'}" data-recent="${estRecent(item) ? 'Oui' : 'Non'}" data-search="${(item.ref + ' ' + item.titre + ' ' + item.titreFr).toLowerCase()}">
       <div class="card-status" style="background:var(${
         item.statut === 'Complet' ? '--green' :
         item.statut === 'À monter' ? '--amber' :
@@ -357,7 +378,7 @@ function ligneTableauHTML(item) {
     ? `<span class="sale-badge">En vente</span>${item.prix ? ` <span class="cell-prix">${item.prix} €</span>` : ''}`
     : '';
   return `
-    <tr data-famille="${item.famille}" data-annee="${item.annee}" data-statut="${item.statut}" data-vente="${item.enVente ? 'Oui' : 'Non'}" data-search="${(item.ref + ' ' + item.titre + ' ' + item.titreFr).toLowerCase()}">
+    <tr data-famille="${item.famille}" data-annee="${item.annee}" data-statut="${item.statut}" data-vente="${item.enVente ? 'Oui' : 'Non'}" data-recent="${estRecent(item) ? 'Oui' : 'Non'}" data-search="${(item.ref + ' ' + item.titre + ' ' + item.titreFr).toLowerCase()}">
       <td><img class="thumb" src="${img}" alt="${item.titre}" loading="lazy" data-titre="${item.titre}" onerror="this.style.visibility='hidden'"></td>
       <td class="cell-ref">${item.ref}</td>
       <td class="cell-titre">${item.titre || '(titre inconnu)'}${item.titreFr ? `<div class="fr">${item.titreFr}</div>` : ''}</td>
@@ -381,6 +402,7 @@ function appliquerFiltres() {
   const annee = document.getElementById('annee').value;
   const statut = document.getElementById('statut').value;
   const vente = document.getElementById('vente').value;
+  const nouveautesActif = document.getElementById('btnNouveautes').classList.contains('active');
 
   const vueListe = document.getElementById('tableWrap').style.display !== 'none';
   const elements = vueListe
@@ -394,7 +416,8 @@ function appliquerFiltres() {
     const matchAnnee = !annee || el.dataset.annee === annee;
     const matchStatut = !statut || el.dataset.statut === statut;
     const matchVente = !vente || el.dataset.vente === vente;
-    const ok = matchRecherche && matchFamille && matchAnnee && matchStatut && matchVente;
+    const matchNouveautes = !nouveautesActif || el.dataset.recent === 'Oui';
+    const ok = matchRecherche && matchFamille && matchAnnee && matchStatut && matchVente && matchNouveautes;
     el.style.display = ok ? '' : 'none';
     if (ok) visibles++;
   });
@@ -415,6 +438,11 @@ async function init() {
 
     ['search','famille','annee','statut','vente'].forEach(id => {
       document.getElementById(id).addEventListener('input', appliquerFiltres);
+    });
+
+    document.getElementById('btnNouveautes').addEventListener('click', function() {
+      this.classList.toggle('active');
+      appliquerFiltres();
     });
 
     const grid = document.getElementById('grid');
